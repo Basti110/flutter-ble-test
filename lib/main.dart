@@ -54,12 +54,12 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {});
     });
 
-    _btService.getConnectionController().listen((state) { 
+    _btService.getConnectionController().listen((state) {
       _connected = state;
       setState(() {});
     });
 
-    _btService.getMsgStream().listen((msg) { 
+    _btService.getMsgStream().listen((msg) {
       _labelText = msg.toString();
       if (msg["status_code"] == 1) {
         switch (msg["response"]) {
@@ -108,7 +108,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 }
                 else {
                   _btService.turnBluetoothOff();
-                } 
+                }
               },
             ),
             ListTile(
@@ -121,11 +121,12 @@ class _MyHomePageState extends State<MyHomePage> {
                     ? const Text('Disconnect')
                     : const Text('Connect')),
                 onPressed: () {
-                  logger.d("connect clicked");
                   if(_connected) {
-                    _btService.disconnectFromServer();  
-                  } 
+                    logger.d("diconnect clicked");
+                    _btService.disconnectFromServer();
+                  }
                   else {
+                    logger.d("connect clicked");
                     _btService.connectToServer();
                   }
                   setState(() {});
@@ -138,7 +139,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ? const Text('Station 2 activated')
                     : const Text('Station 2 deactivated')),
               trailing: SizedBox(
-                width: 180, 
+                width: 180,
                 child: Row(
                   children: <Widget>[
                     Expanded(
@@ -155,7 +156,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                       )
                     ),
-                    Expanded( 
+                    Expanded(
                       flex: 1,
                       child: SizedBox(
                         width: 30,
@@ -194,7 +195,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ? const Text('Deadlifts activated')
                     : const Text('Deadlifts deactivated')),
               trailing: SizedBox(
-                width: 180, 
+                width: 180,
                 child: Row(
                   children: <Widget>[
                     Expanded(
@@ -211,7 +212,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                       )
                     ),
-                    Expanded( 
+                    Expanded(
                       flex: 1,
                       child: SizedBox(
                         width: 30,
@@ -220,7 +221,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               ? const Text('Stop')
                               : const Text('Start')),
                           onPressed: () {
-                            
+
                             int id = int.parse(_exerciseTextController.text, onError: (e) => -1);
                             if (id < 0) {
                               logger.w("Exercise ID must be a Number");

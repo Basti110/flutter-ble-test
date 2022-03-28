@@ -4,9 +4,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:logger/logger.dart';
+//If Logger is not used!
+// class Logger {
+//   void d(dynamic message, [dynamic error, StackTrace? stackTrace]) {}
+//   void i(dynamic message, [dynamic error, StackTrace? stackTrace]) {}
+//   void w(dynamic message, [dynamic error, StackTrace? stackTrace]) {}
+//   void e(dynamic message, [dynamic error, StackTrace? stackTrace]) {}
+// }
 
 class BluetoothServiceControl {
-  //Public 
+  //Public
   BluetoothDevice? device;
   Stream<BluetoothState> btState = FlutterBluePlus.instance.state;
   String connectionID = "";
@@ -37,7 +44,7 @@ class BluetoothServiceControl {
     onResume: (){},
     onPause: (){},
   );
-  
+
   BluetoothServiceControl([Logger? logger]) {
     _logger = logger;
     int serviceStart = int.parse(_serviceStart, radix: 16);
@@ -52,7 +59,7 @@ class BluetoothServiceControl {
   void setLogger(Logger logger) {
     _logger = logger;
   }
-  
+
   Future<bool> turnBluetoothOn() {
     return FlutterBluePlus.instance.turnOn();
   }
@@ -102,13 +109,14 @@ class BluetoothServiceControl {
         break;
       }
     }
+    FlutterBluePlus.instance.stopScan();
     return uuid;
   }
 
   Future<BluetoothService?> _scanDeviceForService(String uuid) async {
     device?.discoverServices();
     BluetoothService? service;
-    _logger?.d("start scanning");
+    _logger?.d("start scanning for service $uuid");
     await for (final results in device!.services.timeout(const Duration(seconds: 2), onTimeout: (eventSink) => eventSink.close())) {
       bool serviceFound = false;
       for (BluetoothService s in results) {
@@ -116,6 +124,7 @@ class BluetoothServiceControl {
         if(s.uuid.toString() == uuid) {
           serviceFound = true;
           service = s;
+          _logger?.d('Found! ${s.uuid.toString()}');
           break;
         }
       }
@@ -162,33 +171,35 @@ class BluetoothServiceControl {
       return false;
     }
     _connectionIsRunning = true;
-  
+
     if (!_bluetoothOn) {
       return _releaseConnectionReturnFalse();
     }
-    
+
     String uuid = await _startScanForDeviceAndUUID();
+    _logger?.d("Adcertise UUID: $uuid");
     if (device == null) {
       _logger?.w("No Device with right uuid in advertisement found");
       return _releaseConnectionReturnFalse();
     }
-    _btDeviceStatelistener?.cancel();
-    _logger?.d("Try to connect to device ${device?.id.toString()}");
-    await device?.connect(autoConnect: false); //.timeout(const Duration(seconds: 10), onTimeout: (){});
-    final s = await device?.state.first;
-    if (s != BluetoothDeviceState.connected) {
-      _logger?.w("Could not connect with device ${device?.id.toString()}");
-      return _releaseConnectionReturnFalse();
-    }
-    _logger?.d("Connected!");
 
-    _btDeviceStatelistener = device?.state.listen((state) { 
-      if(state == BluetoothDeviceState.connected) {
-        _connectionController.add(true);
+    _btDeviceStatelistener?.cancel();
+    if (await device!.state.first == BluetoothDeviceState.connected) {
+      _logger?.d("Already connected!");
+    }
+    else {
+      _logger?.d("Try to connect to device ${device?.id.toString()}");
+      await device?.connect(autoConnect: false); //.timeout(const Duration(seconds: 10), onTimeout: (){});
+      final s = await device?.state.first;
+      if (s != BluetoothDeviceState.connected) {
+        _logger?.w("Could not connect with device ${device?.id.toString()}");
+        return _releaseConnectionReturnFalse();
       }
-      else {
-        _connectionController.add(false);
-      }
+      _logger?.d("Connected!");
+    }
+
+    _btDeviceStatelistener = device?.state.listen((state) {
+      _connectionController.add(state == BluetoothDeviceState.connected);
     });
     int mtu = await device?.requestMtu(223) ?? -1;
     _logger?.d("New MTU: $mtu");
@@ -208,7 +219,9 @@ class BluetoothServiceControl {
     BluetoothCharacteristic charactersitics = _btService!.characteristics[0];
     charactersitics.onValueChangedStream.listen(onNewByteMsg);
 
-    await charactersitics.setNotifyValue(true);
+    //bool test = await charactersitics.setNotifyValue(false);
+    bool test = await charactersitics.setNotifyValue(true);
+    _logger?.d("notify = $test");
     await charactersitics.read();
     // await charactersitics.write( _getBytes("hello"), withoutResponse: true);
     // await charactersitics.read();
@@ -221,6 +234,7 @@ class BluetoothServiceControl {
 
   disconnectFromServer() async {
     if(device == null) {
+      _logger?.d("Device already disconnected");
       return true;
     }
     await device?.disconnect();
@@ -231,19 +245,21 @@ Future<bool> sendMsg(String msg) async {
     for(int i = 0; i < 10; ++i) {
       bool error = false;
       try {
+        _logger?.i("Start Write");
         await charactersitics.write(_getBytes(msg), withoutResponse: false);
+        _logger?.w("End Write");
       }
       on PlatformException catch(_) {
         error = true;
       }
       on Exception catch(_) {
+        _logger?.w("End Write");
         return false;
       }
-      
+
       if(!error) {
         return true;
       }
-      await Future.delayed(const Duration(seconds: 1));
   }
   return false;
 }
@@ -291,7 +307,7 @@ Future<bool> sendMsg(String msg) async {
     if (!_initialized) {
       return false;
     }
-  
+
     Map request = getMapFromRequest(3);
     request["payload"] = {"station": stationID, "exercise": exerciseID, "set_id": setID};
     String jsonData = jsonEncode(request);
@@ -303,7 +319,7 @@ Future<bool> sendMsg(String msg) async {
     if (!_initialized) {
       return false;
     }
-  
+
     Map request = getMapFromRequest(4);
     request["payload"] = {"station": stationID, "exercise": exerciseID, "set_id": setID};
     String jsonData = jsonEncode(request);
