@@ -165,7 +165,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               ? const Text('Stop')
                               : const Text('Start')),
                           onPressed: () {
-                            logger.d("station clicked");
+                            //logger.d("station clicked");
                             int id = int.parse(_stationTextController.text, onError: (e) => -1);
                             if (id < 0) {
                               logger.w("Station ID must be a Number");

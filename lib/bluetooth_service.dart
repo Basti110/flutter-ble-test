@@ -152,10 +152,12 @@ class BluetoothServiceControl {
       return;
     }
 
+    _logger?.w(msgStr);
     if(msg["response"] == 500) {
       showToast('connection established');
       connectionID = msg["id"];
       _initialized = true;
+      _connectionController.add(true);
     }
     _serverMsgController.add(msg);
   }
@@ -227,7 +229,7 @@ class BluetoothServiceControl {
     // await charactersitics.read();
     _logger?.d("Notification established");
 
-    _connectionController.add(true);
+
     _connectionIsRunning = false;
     return true;
   }
@@ -252,8 +254,8 @@ Future<bool> sendMsg(String msg) async {
       on PlatformException catch(_) {
         error = true;
       }
-      on Exception catch(_) {
-        _logger?.w("End Write");
+      on Exception catch(e) {
+        _logger?.w("End Write: $e");
         return false;
       }
 
@@ -280,6 +282,7 @@ Future<bool> sendMsg(String msg) async {
 
   Future<bool> loginStation(int stationID) async {
     if (!_initialized) {
+      _logger?.w("Not Initialized");
       return false;
     }
 
